@@ -11,11 +11,15 @@
 
 ## 功能
 
-- 开源 3D 角色 [RobotExpressive](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive)（three.js 官方示例，CC0），自带 14 组动画 + 表情 morph
+- 内置 5 个开源 3D 形象，设置里一键切换：
+  - [RobotExpressive](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive)（three.js 示例，CC0，14 组动画 + 表情 morph）
+  - Xbot / Soldier / Michelle（three.js 示例，Mixamo 角色，带待机 / 手势 / 舞蹈动画）
+  - [Fox](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox)（Khronos glTF 示例，CC-BY 4.0）
+  - 也支持填入任意 GLB 地址作为自定义形象，动画名会自动匹配
 - 接入 DeepSeek 大模型，回复过程中角色会做手势 / 摆头 / 开口动画，思考时低头沉思
 - 打字机式对话气泡，可限制回复字数、调节字号、说话速度
 - **布局模式**：角色与对话框都可以随意拖动、拉角缩放，布局自动保存
-- 设置面板：API Key、模型（`deepseek-chat` / `deepseek-reasoner`）、人设、主题（极光 / 落日 / 海洋 / 星夜）、3D 模型地址
+- 设置面板：形象卡片切换、DeepSeek 模型卡片（V3 `deepseek-chat` / R1 `deepseek-reasoner`）、API Key、人设、主题（极光 / 落日 / 海洋 / 星夜）、自定义 GLB 地址
 - 对话记录侧栏、快捷提问、点击角色有惊喜
 
 ## 开发

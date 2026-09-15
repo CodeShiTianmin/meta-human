@@ -4,9 +4,19 @@ html,
 body,
 #app,
 .taro_router,
-.taro_page {
+.taro_page,
+.taro-tabbar__panel {
   height: 100%;
+  max-height: 100%;
   overflow: hidden !important;
+  overscroll-behavior: none;
+  scrollbar-gutter: auto;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
 }
 
 * {
@@ -14,8 +24,21 @@ body,
   -ms-overflow-style: none;
 }
 
-*::-webkit-scrollbar {
+*::-webkit-scrollbar,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-track {
   width: 0;
   height: 0;
+  background: transparent;
   display: none;
+}
+
+taro-scroll-view-core,
+.taro-scroll-view__scroll-y,
+.taro-scroll-view__scroll-x {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
