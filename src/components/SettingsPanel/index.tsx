@@ -1,7 +1,7 @@
 import { View, Text, Slider, Input, Textarea, ScrollView } from '@tarojs/components'
 import type { CommonEvent } from '@tarojs/components'
-import { DEEPSEEK_MODELS } from '@/constants'
-import type { Settings } from '@/store/settings'
+import { AVATAR_PRESETS, DEEPSEEK_MODELS, DEEPSEEK_MODEL_INFO } from '@/constants'
+import { resolveAvatar, type Settings } from '@/store/settings'
 import './index.scss'
 
 interface Props {
@@ -52,6 +52,9 @@ export default function SettingsPanel(props: Props) {
     onClose
   } = props
 
+  const avatar = resolveAvatar(settings)
+  const usingCustom = !!settings.customModelUrl.trim()
+
   return (
     <View className={`settings ${visible ? 'settings--open' : ''}`}>
       <View className='settings__mask' onClick={onClose} />
@@ -65,6 +68,30 @@ export default function SettingsPanel(props: Props) {
         </View>
 
         <ScrollView scrollY className='settings__scroll' enhanced showScrollbar={false}>
+          <Text className='settings__section'>形象</Text>
+          <View className='settings__avatars'>
+            {AVATAR_PRESETS.map((p) => {
+              const on = !usingCustom && avatar.preset?.id === p.id
+              return (
+                <View
+                  key={p.id}
+                  className={`avatar-card ${on ? 'avatar-card--on' : ''}`}
+                  onClick={() => onSettings({ avatarId: p.id, customModelUrl: '' })}
+                >
+                  <View className='avatar-card__art' style={{ background: p.gradient }}>
+                    <Text className='avatar-card__emoji'>{p.emoji}</Text>
+                    {on && <View className='avatar-card__check'>✓</View>}
+                  </View>
+                  <Text className='avatar-card__name'>{p.name}</Text>
+                  <Text className='avatar-card__tagline'>{p.tagline}</Text>
+                </View>
+              )
+            })}
+          </View>
+          <View className='settings__note'>
+            <Text>{usingCustom ? '正在使用自定义模型，选择上方形象可切回' : avatar.preset?.credit ?? ''}</Text>
+          </View>
+
           <Text className='settings__section'>外观</Text>
           <Row label='形象大小' value={`${avatarSize}px`}>
             <Slider
@@ -150,17 +177,27 @@ export default function SettingsPanel(props: Props) {
               onChange={(e) => onSettings({ typingSpeed: sliderValue(e) })}
             />
           </Row>
-          <Row label='模型'>
-            <View className='settings__chips'>
-              {DEEPSEEK_MODELS.map((m) => (
-                <View
-                  key={m}
-                  className={`settings__chip ${settings.model === m ? 'settings__chip--on' : ''}`}
-                  onClick={() => onSettings({ model: m })}
-                >
-                  {m}
-                </View>
-              ))}
+          <Row label='大模型'>
+            <View className='settings__models'>
+              {DEEPSEEK_MODELS.map((m) => {
+                const info = DEEPSEEK_MODEL_INFO[m]
+                const on = settings.model === m
+                return (
+                  <View
+                    key={m}
+                    className={`model-card ${on ? 'model-card--on' : ''}`}
+                    onClick={() => onSettings({ model: m })}
+                  >
+                    <View className='model-card__icon'>{info.emoji}</View>
+                    <View className='model-card__body'>
+                      <Text className='model-card__name'>{info.name}</Text>
+                      <Text className='model-card__desc'>{info.desc}</Text>
+                      <Text className='model-card__id'>{m}</Text>
+                    </View>
+                    <View className='model-card__radio' />
+                  </View>
+                )
+              })}
             </View>
           </Row>
           <Row label='DeepSeek API Key'>
@@ -183,12 +220,12 @@ export default function SettingsPanel(props: Props) {
           </Row>
 
           <Text className='settings__section'>高级</Text>
-          <Row label='3D 模型地址（GLB）'>
+          <Row label='自定义 3D 模型（GLB 地址，留空使用内置形象）'>
             <Input
               className='settings__input'
-              value={settings.modelUrl}
+              value={settings.customModelUrl}
               placeholder='https://.../model.glb'
-              onInput={(e) => onSettings({ modelUrl: e.detail.value.trim() })}
+              onInput={(e) => onSettings({ customModelUrl: e.detail.value.trim() })}
             />
           </Row>
           <View className='settings__actions'>
@@ -200,7 +237,7 @@ export default function SettingsPanel(props: Props) {
             </View>
           </View>
           <View className='settings__footer'>
-            <Text>3D 形象：RobotExpressive（three.js 示例，CC0）· 大模型：DeepSeek</Text>
+            <Text>3D 形象：{avatar.preset?.credit ?? '自定义模型'} · 大模型：DeepSeek</Text>
           </View>
         </ScrollView>
       </View>

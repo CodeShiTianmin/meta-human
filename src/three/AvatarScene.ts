@@ -11,24 +11,27 @@ import type {
   WebGLRenderer
 } from 'three'
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import type { AvatarAnimations } from '@/constants'
 import type { AvatarMood, ThreeNamespace, ThreePlatform } from './types'
 
 export interface AvatarSceneOptions {
   width: number
   height: number
   modelUrl: string
+  animations: AvatarAnimations
+  /** 模型默认朝向修正（绕 Y 轴，弧度） */
+  rotationY?: number
   onReady?: () => void
   onProgress?: (ratio: number) => void
   onError?: (err: unknown) => void
 }
 
-const IDLE = 'Idle'
-const ONE_SHOT = new Set(['Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp', 'Dance', 'WalkJump'])
-const SPEAK_GESTURES = ['Wave', 'Yes', 'ThumbsUp', 'Yes', 'No', 'Punch']
-const POKE_GESTURES = ['Jump', 'Dance', 'Wave', 'ThumbsUp', 'WalkJump']
-
 const CAMERA_FOV = 32
 const MODEL_HEIGHT_PADDING = 1.18
+/** 所有模型统一缩放到这个高度，让摆动 / 浮动幅度与镜头参数对所有形象一致 */
+const TARGET_HEIGHT = 4.8
+const HEAD_BONE = /(?:^|[:_.])head(?:_?\d+)?$/i
+const IDLE_HINT = /idle|survey|breath|stand|dance/i
 
 function pick<T>(list: T[]): T {
   return list[Math.floor(Math.random() * list.length)]
@@ -66,8 +69,13 @@ export class AvatarScene {
   private headRest: Quaternion | null = null
   private faces: MorphMesh[] = []
   private modelBaseY = 0
-  private modelHeight = 4.8
+  private modelHeight = TARGET_HEIGHT
   private modelWidth = 3.3
+  private baseRotationY = 0
+  private idleName = ''
+  private oneShot = new Set<string>()
+  private speakGestures: string[] = []
+  private pokeGestures: string[] = []
 
   private mood: AvatarMood = 'idle'
   private rafId = 0
@@ -82,6 +90,7 @@ export class AvatarScene {
   constructor(platform: ThreePlatform, opts: AvatarSceneOptions) {
     this.platform = platform
     this.opts = opts
+    this.baseRotationY = opts.rotationY ?? 0
     const { THREE } = platform.bundle
     this.THREE = THREE
 
@@ -152,12 +161,20 @@ export class AvatarScene {
   private setupModel(gltf: GLTF) {
     const { THREE } = this
     const model = gltf.scene
+    const rawBox = new THREE.Box3().setFromObject(model)
+    const rawSize = rawBox.getSize(new THREE.Vector3())
+    const scale = rawSize.y > 0 ? TARGET_HEIGHT / rawSize.y : 1
+    model.scale.setScalar(scale)
+    model.rotation.y = this.baseRotationY
+    model.updateMatrixWorld(true)
+
     const box = new THREE.Box3().setFromObject(model)
     const size = box.getSize(new THREE.Vector3())
+    const center = box.getCenter(new THREE.Vector3())
     this.modelHeight = size.y
     this.modelWidth = Math.max(size.x, size.z)
     this.modelBaseY = -box.min.y - size.y / 2
-    model.position.y = this.modelBaseY
+    model.position.set(-center.x, this.modelBaseY, -center.z)
     this.model = model
     this.scene.add(model)
 
@@ -172,30 +189,48 @@ export class AvatarScene {
       if (mesh.isMesh && mesh.morphTargetDictionary && 'Surprised' in mesh.morphTargetDictionary) {
         this.faces.push(mesh)
       }
-      if (!this.head && /^head$/i.test(obj.name)) this.head = obj
+      if (!this.head && HEAD_BONE.test(obj.name)) this.head = obj
     })
     if (this.head) this.headRest = this.head.quaternion.clone()
+
+    this.resolveAnimations(gltf.animations.map((c) => c.name))
 
     this.mixer = new THREE.AnimationMixer(model)
     for (const clip of gltf.animations) {
       const action = this.mixer.clipAction(clip)
       this.actions[clip.name] = action
-      if (ONE_SHOT.has(clip.name)) {
+      if (this.oneShot.has(clip.name)) {
         action.clampWhenFinished = true
         action.loop = THREE.LoopOnce
       }
     }
     this.mixer.addEventListener('finished', () => {
-      if (!this.disposed) this.fadeTo(IDLE, 0.35)
+      if (!this.disposed) this.fadeTo(this.idleName, 0.35)
     })
-    this.fadeTo(IDLE, 0)
+    this.fadeTo(this.idleName, 0)
     this.updateCamera()
+  }
+
+  /** 把预设的动画名与模型实际自带的动画对齐，缺失的自动忽略 */
+  private resolveAnimations(available: string[]) {
+    const { idle, gestures, pokes } = this.opts.animations
+    const has = new Set(available)
+    this.idleName =
+      idle.find((n) => has.has(n)) ||
+      available.find((n) => IDLE_HINT.test(n)) ||
+      available[0] ||
+      ''
+    const usable = (list: string[]) => list.filter((n) => has.has(n) && n !== this.idleName)
+    this.speakGestures = usable(gestures)
+    this.pokeGestures = usable(pokes)
+    this.oneShot = new Set([...this.speakGestures, ...this.pokeGestures])
   }
 
   private fadeTo(name: string, duration: number) {
     const next = this.actions[name]
     if (!next) return
     const prev = this.active
+    if (prev === next && !this.oneShot.has(name)) return
     if (prev && prev !== next) prev.fadeOut(duration)
     next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play()
     this.active = next
@@ -204,7 +239,7 @@ export class AvatarScene {
   private isPlayingOneShot() {
     if (!this.active) return false
     const name = this.active.getClip().name
-    return ONE_SHOT.has(name) && this.active.isRunning()
+    return this.oneShot.has(name) && this.active.isRunning()
   }
 
   setMood(mood: AvatarMood) {
@@ -215,8 +250,8 @@ export class AvatarScene {
 
   /** 点击形象时的反应 */
   poke() {
-    if (!this.ready || this.isPlayingOneShot()) return
-    this.fadeTo(pick(POKE_GESTURES), 0.2)
+    if (!this.ready || this.isPlayingOneShot() || !this.pokeGestures.length) return
+    this.fadeTo(pick(this.pokeGestures), 0.2)
   }
 
   setSize(width: number, height: number) {
@@ -259,8 +294,8 @@ export class AvatarScene {
     const thinking = this.mood === 'thinking'
 
     // 说话时随机穿插手势
-    if (speaking && t >= this.nextGestureAt && !this.isPlayingOneShot()) {
-      this.fadeTo(pick(SPEAK_GESTURES), 0.3)
+    if (speaking && this.speakGestures.length && t >= this.nextGestureAt && !this.isPlayingOneShot()) {
+      this.fadeTo(pick(this.speakGestures), 0.3)
       this.nextGestureAt = t + 2.6 + Math.random() * 2.2
     }
 
@@ -268,7 +303,7 @@ export class AvatarScene {
     const bob = Math.sin(t * (speaking ? 3.2 : 1.4)) * (speaking ? 0.05 : 0.035)
     model.position.y = this.modelBaseY + Math.max(0, bob)
     const swayTarget = speaking ? Math.sin(t * 1.9) * 0.05 : thinking ? 0.22 : Math.sin(t * 0.55) * 0.14
-    model.rotation.y = damp(model.rotation.y, swayTarget, 3, dt)
+    model.rotation.y = damp(model.rotation.y, this.baseRotationY + swayTarget, 3, dt)
     if (this.shadow) {
       const s = 1 - Math.max(0, bob) * 1.6
       this.shadow.scale.set(this.modelWidth * 0.42 * s, this.modelWidth * 0.3 * s, 1)

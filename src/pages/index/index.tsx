@@ -1,6 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Avatar3D from '@/components/Avatar3D'
 import DragBox from '@/components/DragBox'
 import SpeechBubble from '@/components/SpeechBubble'
@@ -14,6 +14,7 @@ import {
   getWindowSize,
   loadLayout,
   loadSettings,
+  resolveAvatar,
   saveLayout,
   saveSettings,
   type Layout,
@@ -76,6 +77,16 @@ export default function Index() {
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const mood: AvatarMood = thinking ? 'thinking' : typing ? 'speaking' : 'idle'
+  const avatar = useMemo(
+    () => resolveAvatar(settings),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [settings.avatarId, settings.customModelUrl]
+  )
+  const avatarName = avatar.preset?.name ?? AVATAR_NAME
+
+  useEffect(() => {
+    setAvatarReady(false)
+  }, [avatar.key])
 
   // ---------- 打字机 ----------
   const speak = useCallback((text: string) => {
@@ -176,7 +187,7 @@ export default function Index() {
     try {
       const system: ChatMessage = {
         role: 'system',
-        content: `${settings.persona}\n你叫${AVATAR_NAME}。每次回复严格控制在 ${settings.maxChars} 个字以内。`
+        content: `${settings.persona}\n你叫${avatarName}。每次回复严格控制在 ${settings.maxChars} 个字以内。`
       }
       const reply = await chatCompletion({
         apiKey: settings.apiKey || DEFAULT_SETTINGS.apiKey,
@@ -211,7 +222,7 @@ export default function Index() {
         <View className='topbar__brand'>
           <View className='topbar__logo'>✦</View>
           <View>
-            <Text className='topbar__title'>{AVATAR_NAME}</Text>
+            <Text className='topbar__title'>{avatarName}</Text>
             <View className='topbar__status'>
               <View className={`topbar__dot topbar__dot--${mood}`} />
               <Text className='topbar__status-text'>{statusText}</Text>
@@ -254,7 +265,7 @@ export default function Index() {
         <Avatar3D
           width={layout.avatar.w}
           height={layout.avatar.h}
-          modelUrl={settings.modelUrl}
+          avatar={avatar}
           mood={mood}
           onReady={() => setAvatarReady(true)}
         />
@@ -274,7 +285,7 @@ export default function Index() {
         onChangeEnd={(r) => updateLayout('bubble', r, true)}
       >
         <SpeechBubble
-          name={AVATAR_NAME}
+          name={avatarName}
           text={shownText}
           typing={typing}
           thinking={thinking}

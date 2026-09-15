@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import { AvatarScene } from '@/three/AvatarScene'
 import { createThreePlatform } from '@/three/platform'
 import type { AvatarMood } from '@/three/types'
+import type { ResolvedAvatar } from '@/store/settings'
 import './index.scss'
 
 interface Props {
   width: number
   height: number
-  modelUrl: string
+  avatar: ResolvedAvatar
   mood: AvatarMood
   onReady?: () => void
 }
@@ -18,7 +19,7 @@ type Status = 'loading' | 'ready' | 'error'
 
 let uid = 0
 
-export default function Avatar3D({ width, height, modelUrl, mood, onReady }: Props) {
+export default function Avatar3D({ width, height, avatar, mood, onReady }: Props) {
   const idRef = useRef(`avatar-canvas-${++uid}`)
   const sceneRef = useRef<AvatarScene | null>(null)
   const sizeRef = useRef({ width, height })
@@ -53,7 +54,9 @@ export default function Avatar3D({ width, height, modelUrl, mood, onReady }: Pro
             sceneRef.current = new AvatarScene(platform, {
               width: w,
               height: h,
-              modelUrl,
+              modelUrl: avatar.url,
+              animations: avatar.anim,
+              rotationY: avatar.rotationY,
               onProgress: (r) => !cancelled && setProgress(r),
               onReady: () => {
                 if (cancelled) return
@@ -80,7 +83,7 @@ export default function Avatar3D({ width, height, modelUrl, mood, onReady }: Pro
       sceneRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modelUrl, attempt])
+  }, [avatar.key, attempt])
 
   useEffect(() => {
     sceneRef.current?.setSize(width, height)
@@ -111,7 +114,7 @@ export default function Avatar3D({ width, height, modelUrl, mood, onReady }: Pro
       )}
       {status === 'error' && (
         <View className='avatar3d__overlay' onClick={() => setAttempt((a) => a + 1)}>
-          <Text className='avatar3d__emoji'>🤖</Text>
+          <Text className='avatar3d__emoji'>{avatar.preset?.emoji ?? '🤖'}</Text>
           <Text className='avatar3d__hint'>模型加载失败，点我重试</Text>
         </View>
       )}
