@@ -1,0 +1,21 @@
+// 仅 H5 / Android(WebView) 生效
+// Taro H5 默认给页面容器 overflow-y: scroll，桌面浏览器会常驻一条滚动条
+html,
+body,
+#app,
+.taro_router,
+.taro_page {
+  height: 100%;
+  overflow: hidden !important;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
