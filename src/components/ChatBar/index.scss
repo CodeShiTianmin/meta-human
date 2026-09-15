@@ -1,0 +1,90 @@
+.chatbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 8px 14px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 40%);
+
+  &__quick {
+    white-space: nowrap;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  &__chip {
+    display: inline-block;
+    font-size: 12.5px;
+    padding: 7px 13px;
+    margin-right: 8px;
+    border-radius: 999px;
+    color: #5f4bb0;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(143, 107, 255, 0.28);
+    box-shadow: 0 4px 14px rgba(120, 90, 220, 0.12);
+    backdrop-filter: blur(8px);
+    transition: transform 0.15s ease;
+
+    &:active {
+      transform: scale(0.96);
+    }
+
+    &--off {
+      opacity: 0.5;
+    }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 6px 6px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 10px 34px rgba(90, 70, 180, 0.18);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    line-height: 40px;
+    font-size: 15px;
+    color: #2d2350;
+  }
+
+  &__placeholder {
+    color: #ab9fd6;
+  }
+
+  &__send {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #8f6bff, #ff7ac6);
+    box-shadow: 0 6px 16px rgba(143, 107, 255, 0.4);
+    transition: transform 0.15s ease, opacity 0.2s ease;
+
+    &:active {
+      transform: scale(0.92);
+    }
+
+    &--off {
+      opacity: 0.45;
+      box-shadow: none;
+    }
+  }
+
+  &__send-icon {
+    color: #fff;
+    font-size: 16px;
+    margin-left: 2px;
+  }
+}

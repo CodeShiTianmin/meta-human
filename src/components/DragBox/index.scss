@@ -1,0 +1,61 @@
+.dragbox {
+  position: absolute;
+  box-sizing: border-box;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1.5px dashed rgba(124, 92, 255, 0.45);
+    border-radius: 22px;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.25s ease;
+  }
+
+  &--quiet::after {
+    opacity: 0;
+  }
+
+  &--quiet &__handle {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__handle {
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    transition: opacity 0.25s ease;
+  }
+
+  &__handle-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8f6bff, #ff7ac6);
+    box-shadow: 0 4px 12px rgba(124, 92, 255, 0.35);
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      border-radius: 1px;
+    }
+  }
+}
